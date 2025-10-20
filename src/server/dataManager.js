@@ -256,7 +256,6 @@ class UserData {
      */
     addHealing(skillId, element, healing, isCrit, isLucky, isCauseLucky) {
         this.healingStats.addRecord(healing, isCrit, isLucky);
-        // 记录技能使用情况
         skillId = skillId + 1000000000;
         if (!this.skillUsage.has(skillId)) {
             this.skillUsage.set(skillId, new StatisticData(this, '治疗', element));
@@ -320,7 +319,6 @@ class UserData {
             hp: this.attr.hp,
             max_hp: this.attr.max_hp,
             dead_count: this.deadCount,
-            // Expose server-side combat timing to match StarResonanceDps duration
             start_ts: this.damageStats.timeRange?.[0] || null,
             last_ts: this.damageStats.timeRange?.[1] || null,
         };
@@ -423,7 +421,6 @@ class UserDataManager {
     }
 
     async initialize() {
-        // No es necesario cargar caché si no se guarda
     }
     /** Obtener o crear usuario
      * @param {number} uid - ID de usuario
@@ -441,7 +438,6 @@ class UserDataManager {
                 if (cachedData.name) {
                     user.setName(cachedData.name);
                 }
-                // Ya no se carga la profesión desde el caché de usuario
                 if (cachedData.fightPoint !== undefined && cachedData.fightPoint !== null) {
                     user.setFightPoint(cachedData.fightPoint);
                 }
@@ -470,7 +466,6 @@ class UserDataManager {
      * @param {number} targetUid - ID del objetivo del daño
      */
     addDamage(uid, skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue = 0, targetUid) {
-        // isPaused y globalSettings.onlyRecordEliteDummy se manejarán en el sniffer o en el punto de entrada
         this.checkTimeoutClear();
         const user = this.getUser(uid);
         user.addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue);
@@ -487,7 +482,6 @@ class UserDataManager {
      * @param {number} targetUid - ID del objetivo de la curación
      */
     addHealing(uid, skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid) {
-        // isPaused se manejará en el sniffer o en el punto de entrada
         this.checkTimeoutClear();
         if (uid !== 0) {
             const user = this.getUser(uid);
@@ -501,7 +495,6 @@ class UserDataManager {
      * @param {boolean} isDead - Si es daño letal
      * */
     addTakenDamage(uid, damage, isDead) {
-        // isPaused se manejará en el sniffer o en el punto de entrada
         this.checkTimeoutClear();
         const user = this.getUser(uid);
         user.addTakenDamage(damage, isDead);
@@ -687,11 +680,9 @@ class UserDataManager {
                 await fsPromises.mkdir(usersDir, { recursive: true });
             }
 
-            // Guardar resumen de todos los datos de usuario
             const allUserDataPath = path.join(logDir, 'allUserData.json');
             await fsPromises.writeFile(allUserDataPath, JSON.stringify(allUsersData, null, 2), 'utf8');
 
-            // Guardar datos detallados de cada usuario
             for (const [uid, userData] of userDatas.entries()) {
                 const userDataPath = path.join(usersDir, `${uid}.json`);
                 await fsPromises.writeFile(userDataPath, JSON.stringify(userData, null, 2), 'utf8');
@@ -709,7 +700,6 @@ class UserDataManager {
     checkTimeoutClear() {
         if (!this.globalSettings.autoClearOnTimeout || this.users.size === 0) return;
         const currentTime = Date.now();
-        // Match StarResonanceDps section timeout (~5s) instead of 20s to keep sections aligned
         const SECTION_TIMEOUT_MS = 5000;
         if (this.lastLogTime && currentTime - this.lastLogTime > SECTION_TIMEOUT_MS) {
             this.clearAll();

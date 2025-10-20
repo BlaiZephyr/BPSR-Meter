@@ -1,8 +1,6 @@
-// Estado global para modo Lite
-let isLiteMode = true; // Always true - Lite mode only
-let liteModeType = 'dps'; // Keep for compatibility
+let isLiteMode = true;
+let liteModeType = 'dps';
 const professionMap = {
-    // Clases Principales
     '雷影剑士': { name: 'Stormblade', icon: 'Stormblade.png', role: 'dps' },
     '冰魔导师': { name: 'Frost Mage', icon: 'Frost Mage.png', role: 'dps' },
     '涤罪恶火·战斧': { name: 'Fire Axe', icon: 'Fire Axe.png', role: 'dps' },
@@ -15,7 +13,6 @@ const professionMap = {
     '神盾骑士': { name: 'Shield Knight', icon: 'guardian.png', role: 'tank' },
     '灵魂乐手': { name: 'Soul Musician', icon: 'sonido_feroz.png', role: 'dps' },
 
-    // Especializaciones
     '居合': { name: 'laido Slash', icon: 'Stormblade.png', role: 'dps' },
     '月刃': { name: 'MoonStrike', icon: 'MoonStrike.png', role: 'dps' },
     '冰矛': { name: 'Icicle', icon: 'lanza_hielo.png', role: 'dps' },
@@ -40,26 +37,21 @@ const professionMap = {
     let lastTotalDamage = 0;
     let lastDamageChangeTime = Date.now();
     
-    // Simple DPS calculation matching StarResonanceDps exactly - no smoothing, no complex logic
-    // Just raw damage ÷ time using server timestamps
-    
-    // Phase timer tracking
     let phaseStartTime = null;
     let phaseNumber = 1;
     let phaseTimerInterval = null;
     
-    // Calculate bar width based on damage relative to highest damage player
     function calculateBarWidth(currentDamage, maxDamage) {
         if (maxDamage <= 0) return 0;
         return (currentDamage / maxDamage) * 100;
     }
-    let currentZoom = 1.0; // Factor de zoom inicial
+    let currentZoom = 1.0;
     let syncTimerInterval;
     let syncCountdown = 0;
-    const SYNC_RESET_TIME = 80; // Segundos para el reinicio automático
-    let syncTimerDisplayTimeout; // Para el retardo de 200ms
-    let isLocked = false; // Estado de bloqueo de la ventana
-    let logPreviewTimeout; // Declarar logPreviewTimeout aquí
+    const SYNC_RESET_TIME = 80;
+    let syncTimerDisplayTimeout;
+    let isLocked = false;
+    let logPreviewTimeout;
 
     const dpsTimerDiv = document.getElementById('dps-timer');
     const playerBarsContainer = document.getElementById('player-bars-container');
@@ -67,12 +59,11 @@ const professionMap = {
     const syncIcon = document.querySelector('#sync-button .sync-icon');
     const syncTimerSpan = document.querySelector('#sync-button .sync-timer');
     const lockButton = document.getElementById('lock-button');
-    const logsSection = document.getElementById('logs-section'); // Declarar logsSection aquí
-    const loadingIndicator = document.getElementById('loading-indicator'); // Indicador de carga
+    const logsSection = document.getElementById('logs-section');
+    const loadingIndicator = document.getElementById('loading-indicator');
     const phaseTimer = document.getElementById('phase-timer');
     const phaseTimerText = document.getElementById('phase-timer-text');
 
-    // Permitir interacción con Alt cuando está bloqueado
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Alt') {
             if (document.body.classList.contains('locked')) {
@@ -97,7 +88,6 @@ const professionMap = {
         const clearDataButton = document.getElementById('clear-data-button');
         if (clearDataButton) {
             clearDataButton.addEventListener('click', () => {
-                // Clear server data and reset phase timer
                 fetch('/api/clear');
                 resetPhaseTimer();
                 console.log('Data cleared');
@@ -105,7 +95,6 @@ const professionMap = {
         }
 
 
-        // Removed Advanced/Lite toggle functionality - Lite mode only
 
         const zoomInButton = document.getElementById('zoom-in-button');
         const zoomOutButton = document.getElementById('zoom-out-button');
@@ -125,7 +114,6 @@ const professionMap = {
         }
 
         if (syncButton) {
-            // syncButton.addEventListener('click', syncData); // El botón de sincronización ya no es clicable
         }
 
         if (lockButton) {
@@ -135,7 +123,6 @@ const professionMap = {
                 }
             });
 
-            // Escuchar cambios de estado del candado desde el proceso principal
             if (window.electronAPI) {
                 window.electronAPI.onLockStateChanged((locked) => {
                     isLocked = locked;
@@ -144,7 +131,6 @@ const professionMap = {
                     document.body.classList.toggle('locked', isLocked); // Añadir/quitar clase al body
                 });
                 
-                // Listen for header toggle
                 window.electronAPI.onToggleHeader(() => {
                     const header = document.querySelector('.controls');
                     if (header) {
@@ -152,7 +138,6 @@ const professionMap = {
                     }
                 });
                 
-                // Add keyboard listener for debug panel toggle
                 document.addEventListener('keydown', (event) => {
                     if (event.ctrlKey && event.altKey && event.key === 'd') {
                         const debugDiv = document.getElementById('debug-info');
@@ -202,14 +187,11 @@ const professionMap = {
         if (numPlayersCapped > 0) {
             barsHeight = (numPlayersCapped * barHeight) + ((numPlayersCapped - 1) * barGap);
         } else {
-            // Altura mínima para el mensaje "Esperando datos..."
             barsHeight = 50;
         }
 
-        // Calcular la altura total sin escalar, incluyendo la cabecera y un búfer
         const totalContentHeightUnscaled = headerHeight + marginTop + borderWidth + barsHeight + 20; // Búfer de 20px
 
-        // Aplicar el zoom actual al ancho y alto de la ventana
         const finalWidth = Math.round(baseWidth * currentZoom);
         const finalHeight = Math.round(totalContentHeightUnscaled * currentZoom);
         
@@ -227,7 +209,6 @@ const professionMap = {
         resetPhaseTimer(); // Reset phase timer
     }
     
-    // Phase timer functions
     function startPhaseTimer() {
         if (phaseStartTime) return; // Already running
         
@@ -265,9 +246,7 @@ const professionMap = {
         }
     }
 
-    // La función syncData ya no se llama por un clic, pero se mantiene por si se usa internamente
     async function syncData() {
-        // No modificar el estado visual aquí, se gestiona en updateSyncButtonState
         try {
             await fetch('/api/sync', { method: 'POST' });
             console.log('Datos sincronizados internamente.');
@@ -276,28 +255,23 @@ const professionMap = {
         }
     }
 
-    // Función para actualizar el estado visual del indicador de sincronización
     function updateSyncButtonState() {
-        // Skip if sync button elements don't exist
         if (!syncIcon || !syncTimerSpan) return;
         
         clearTimeout(syncTimerDisplayTimeout); // Limpiar cualquier timeout pendiente
 
         if (syncTimerInterval) { // Si el temporizador está activo (hay cuenta regresiva)
             if (syncCountdown <= 60) {
-                // Mostrar temporizador, ocultar icono
                 syncIcon.style.display = 'none';
                 syncIcon.classList.remove('spinning');
                 syncTimerSpan.innerText = `${syncCountdown}s`;
                 syncTimerSpan.style.display = 'block';
             } else {
-                // Mostrar icono girando, ocultar temporizador
                 syncIcon.style.display = 'block';
                 syncIcon.classList.add('spinning'); // Asegura que gire continuamente
                 syncTimerSpan.style.display = 'none';
             }
         } else { // Si el temporizador no está activo (no hay cuenta regresiva)
-            // Mostrar icono girando, ocultar temporizador
             syncIcon.style.display = 'block';
             syncIcon.classList.add('spinning'); // Asegura que gire continuamente
             syncTimerSpan.style.display = 'none';
@@ -308,11 +282,9 @@ const professionMap = {
     function startSyncTimer() {
         if (syncTimerInterval) return; // Evitar múltiples temporizadores
         syncCountdown = SYNC_RESET_TIME;
-        // Sync button removed - no state to update
 
         syncTimerInterval = setInterval(() => {
             syncCountdown--;
-            // Sync button removed - no state to update
 
             if (syncCountdown <= 0) {
                 stopSyncTimer();
@@ -325,7 +297,6 @@ const professionMap = {
         clearInterval(syncTimerInterval);
         syncTimerInterval = null;
         clearTimeout(syncTimerDisplayTimeout); // Limpiar el timeout si existe
-        // Sync button removed - no state to update
     }
 
     function formatTimer(ms) {
@@ -455,11 +426,8 @@ const professionMap = {
 
             const sumaTotalDamage = userArray.reduce((acc, u) => acc + (u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0), 0);
 
-            // No client-side combat tracking - server handles everything
 
-            // No client-side flushing - let server handle 5s timeout like StarResonanceDps
             
-            // Update phase timer when combat starts
             if (sumaTotalDamage > 0 && !phaseStartTime) {
                 startPhaseTimer();
             }
@@ -480,7 +448,6 @@ const professionMap = {
                 stopSyncTimer();
             }
 
-            // Cálculo de damagePercent para todos los usuarios (base para Advanced y Lite DPS)
             userArray.forEach(u => {
                 const userDamage = u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0;
                 u.damagePercent = sumaTotalDamage > 0 ? Math.max(0, Math.min(100, (userDamage / sumaTotalDamage) * 100)) : 0;
@@ -499,21 +466,17 @@ const professionMap = {
             
             userArray = userArray.slice(0, 20);
 
-            // Always use Lite mode
             container.innerHTML = userArray.map((u, index) => {
                     const professionParts = u.profession.split('-');
                     const mainProfessionKey = professionParts[0];
                     const subProfessionKey = professionParts[1];
                     const mainProf = professionMap[mainProfessionKey] || defaultProfession;
                     const subProf = professionMap[subProfessionKey];
-                    // Prioritize main profession role, but use sub-profession if main is not found
                     let prof = mainProf.name !== 'Unknown' ? mainProf : (subProf || mainProf);
                     const nombre = u.name || '';
                     
-                    // Debug: Log the profession info
                     console.log('Player:', nombre, 'Profession:', u.profession, 'Main:', mainProfessionKey, 'Sub:', subProfessionKey, 'Role:', prof.role);
                     
-                    // Role-based color coding
                     let roleColor;
                     if (prof.role === 'healer') {
                         roleColor = '#28a745'; // Green for healers
@@ -526,12 +489,9 @@ const professionMap = {
                     let barFillWidth, barFillBackground, value1, value2, iconHtml;
 
                     if (liteModeType === 'dps') {
-                        // Calculate bar width based on damage relative to highest damage player
                         const maxDamage = Math.max(...userArray.map(player => player.total_damage.total || 0));
                         barFillWidth = calculateBarWidth(u.total_damage.total || 0, maxDamage);
                         
-                        // Calculate DPS exactly like StarResonanceDps: DPS = Total Damage ÷ Duration
-                        // Prefer server timing when available to avoid drift
                         let displayDPS = 0;
                         const serverStart = u.start_ts;
                         const serverLast = u.last_ts;
@@ -539,13 +499,11 @@ const professionMap = {
                             const durationSec = (serverLast - serverStart) / 1000;
                             displayDPS = durationSec > 0 ? (u.total_damage.total || 0) / durationSec : 0;
                         } else {
-                            // Fallback to client-estimated timestamps
                             const playerData = dpsHistory.get(u.uid);
                             if (playerData && playerData.firstDamageTime && playerData.lastDamageTime) {
                                 const combatDuration = (playerData.lastDamageTime - playerData.firstDamageTime) / 1000;
                                 displayDPS = combatDuration > 0 ? (u.total_damage.total || 0) / combatDuration : 0;
                             } else {
-                                // Conservative fallback to avoid inflated numbers
                                 const combatDuration = 20;
                             displayDPS = (u.total_damage.total || 0) / combatDuration;
                             }
@@ -553,11 +511,9 @@ const professionMap = {
                         barFillBackground = displayDPS > 0 ? `linear-gradient(90deg, transparent, ${roleColor})` : 'none';
                         value1 = `${formatStat(u.total_damage.total || 0)} (${formatStat(displayDPS)}/s)`; // Total (DPS/s)
                     } else { // liteModeType === 'healer'
-                        // Simple HPS calculation - no smoothing, raw server timing
                         const totalHealing = userArray.reduce((sum, player) => sum + (player.total_healing.total || 0), 0);
                         barFillWidth = calculateBarWidth(u.total_healing.total || 0, totalHealing);
                         
-                        // Raw HPS = total healing ÷ time (same as DPS logic)
                         let displayHPS = 0;
                         const serverStart = u.start_ts;
                         const serverLast = u.last_ts;
@@ -593,12 +549,10 @@ const professionMap = {
         }
     }
 
-    // Actualizar UI cada 50ms
     setInterval(fetchDataAndRender, 50);
     fetchDataAndRender();
     updateLogsUI();
 
-    // Script para eliminar el texto de depuración de VSCode
     document.addEventListener('DOMContentLoaded', () => {
         const debugTexts = [
             '# VSCode Visible Files',
@@ -608,17 +562,14 @@ const professionMap = {
             '# Current Mode'
         ];
 
-        // Función para buscar y eliminar nodos de texto o elementos que contengan el texto
         function removeDebugText() {
             const allElements = document.body.querySelectorAll('*');
             allElements.forEach(element => {
                 debugTexts.forEach(debugText => {
                     if (element.textContent.includes(debugText)) {
-                        // Si el texto está directamente en el elemento, o es un elemento que contiene solo ese texto
                         if (element.childNodes.length === 1 && element.firstChild.nodeType === Node.TEXT_NODE && element.firstChild.textContent.includes(debugText)) {
                             element.remove();
                         } else {
-                            // Si el texto es parte de un nodo de texto más grande, intentar eliminar solo el nodo de texto
                             Array.from(element.childNodes).forEach(node => {
                                 if (node.nodeType === Node.TEXT_NODE && node.textContent.includes(debugText)) {
                                     node.remove();
@@ -629,7 +580,6 @@ const professionMap = {
                 });
             });
 
-            // También buscar directamente en el body si hay nodos de texto sueltos
             Array.from(document.body.childNodes).forEach(node => {
                 if (node.nodeType === Node.TEXT_NODE) {
                     debugTexts.forEach(debugText => {
@@ -641,7 +591,6 @@ const professionMap = {
             });
         }
 
-        // Ejecutar la función inmediatamente y luego con un pequeño retraso para capturar inyecciones tardías
         removeDebugText();
         setTimeout(removeDebugText, 500); // Reintentar después de 500ms
     });
