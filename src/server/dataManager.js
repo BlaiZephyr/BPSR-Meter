@@ -320,6 +320,9 @@ class UserData {
             hp: this.attr.hp,
             max_hp: this.attr.max_hp,
             dead_count: this.deadCount,
+            // Expose server-side combat timing to match StarResonanceDps duration
+            start_ts: this.damageStats.timeRange?.[0] || null,
+            last_ts: this.damageStats.timeRange?.[1] || null,
         };
     }
 
@@ -706,9 +709,11 @@ class UserDataManager {
     checkTimeoutClear() {
         if (!this.globalSettings.autoClearOnTimeout || this.users.size === 0) return;
         const currentTime = Date.now();
-        if (this.lastLogTime && currentTime - this.lastLogTime > 20000) {
+        // Match StarResonanceDps section timeout (~5s) instead of 20s to keep sections aligned
+        const SECTION_TIMEOUT_MS = 5000;
+        if (this.lastLogTime && currentTime - this.lastLogTime > SECTION_TIMEOUT_MS) {
             this.clearAll();
-            this.logger.info('Timeout reached, statistics cleared!');
+            this.logger.info('Section timeout reached, statistics cleared!');
         }
     }
 }

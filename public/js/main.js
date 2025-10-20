@@ -1,16 +1,16 @@
 // Estado global para modo Lite
-let isLiteMode = false;
-let liteModeType = 'dps'; // 'dps' o 'healer'
+let isLiteMode = true; // Always true - Lite mode only
+let liteModeType = 'dps'; // Keep for compatibility
 const professionMap = {
     // Clases Principales
     '雷影剑士': { name: 'Stormblade', icon: 'Stormblade.png', role: 'dps' },
     '冰魔导师': { name: 'Frost Mage', icon: 'Frost Mage.png', role: 'dps' },
     '涤罪恶火·战斧': { name: 'Fire Axe', icon: 'Fire Axe.png', role: 'dps' },
     '青岚骑士': { name: 'Wind Knight', icon: 'Wind Knight.png', role: 'tank' },
-    '森语者': { name: 'Verdant Oracle', icon: 'Verdant Oracle.png', role: 'dps' },
+    '森语者': { name: 'Verdant Oracle', icon: 'Verdant Oracle.png', role: 'healer' },
     '雷霆一闪·手炮': { name: 'Gunner', icon: 'desconocido.png', role: 'dps' },
     '巨刃守护者': { name: 'Heavy Guardian', icon: 'baluarte_ferreo.png', role: 'tank' },
-    '暗灵祈舞·仪刀/仪仗': { name: 'Spirit Dancer', icon: 'desconocido.png', role: 'dps' },
+    '暗灵祈舞·仪刀/仪仗': { name: 'Beat Performer', icon: 'desconocido.png', role: 'healer' },
     '神射手': { name: 'Marksman', icon: 'arco_halcon.png', role: 'dps' },
     '神盾骑士': { name: 'Shield Knight', icon: 'guardian.png', role: 'tank' },
     '灵魂乐手': { name: 'Soul Musician', icon: 'sonido_feroz.png', role: 'dps' },
@@ -22,16 +22,16 @@ const professionMap = {
     '射线': { name: 'Frostbeam', icon: 'Frost Mage.png', role: 'dps' },
     '防盾': { name: 'Vanguard', icon: 'guardian.png', role: 'tank' },
     '岩盾': { name: 'Skyward', icon: 'Fire Axe.png', role: 'tank' },
-    '惩戒': { name: 'Smite', icon: 'castigo.png', role: 'dps' },
+    '惩戒': { name: 'Smite', icon: 'castigo.png', role: 'healer' },
     '愈合': { name: 'Lifebind', icon: 'Verdant Oracle.png', role: 'healer' },
     '格挡': { name: 'Block', icon: 'guardian.png', role: 'tank' },
     '狼弓': { name: 'Wildpack', icon: 'arco_lobo.png', role: 'dps' },
     '鹰弓': { name: 'Falconry', icon: 'arco_halcon.png', role: 'dps' },
     '光盾': { name: 'Shield', icon: 'egida_luz.png', role: 'tank' },
-    '协奏': { name: 'Concerto', icon: 'Concierto.png', role: 'dps' },
-    '狂音': { name: 'Dissonance', icon: 'sonido_feroz.png', role: 'dps' },
+    '协奏': { name: 'Concerto', icon: 'Concierto.png', role: 'healer' },
+    '狂音': { name: 'Dissonance', icon: 'sonido_feroz.png', role: 'healer' },
     '空枪': { name: 'Empty Gun', icon: 'francotirador.png', role: 'dps' },
-    '重装': { name: 'Heavy Armor', icon: 'Wind Knight.png', role: 'dps' },
+    '重装': { name: 'Heavy Armor', icon: 'Wind Knight.png', role: 'tank' },
 
 };
 
@@ -39,6 +39,20 @@ const professionMap = {
 
     let lastTotalDamage = 0;
     let lastDamageChangeTime = Date.now();
+    
+    // Simple DPS calculation matching StarResonanceDps exactly - no smoothing, no complex logic
+    // Just raw damage ÷ time using server timestamps
+    
+    // Phase timer tracking
+    let phaseStartTime = null;
+    let phaseNumber = 1;
+    let phaseTimerInterval = null;
+    
+    // Calculate bar width based on damage relative to highest damage player
+    function calculateBarWidth(currentDamage, maxDamage) {
+        if (maxDamage <= 0) return 0;
+        return (currentDamage / maxDamage) * 100;
+    }
     let currentZoom = 1.0; // Factor de zoom inicial
     let syncTimerInterval;
     let syncCountdown = 0;
@@ -55,6 +69,8 @@ const professionMap = {
     const lockButton = document.getElementById('lock-button');
     const logsSection = document.getElementById('logs-section'); // Declarar logsSection aquí
     const loadingIndicator = document.getElementById('loading-indicator'); // Indicador de carga
+    const phaseTimer = document.getElementById('phase-timer');
+    const phaseTimerText = document.getElementById('phase-timer-text');
 
     // Permitir interacción con Alt cuando está bloqueado
     document.addEventListener('keydown', (e) => {
@@ -78,35 +94,18 @@ const professionMap = {
             });
         }
 
+        const clearDataButton = document.getElementById('clear-data-button');
+        if (clearDataButton) {
+            clearDataButton.addEventListener('click', () => {
+                // Clear server data and reset phase timer
+                fetch('/api/clear');
+                resetPhaseTimer();
+                console.log('Data cleared');
+            });
+        }
 
-        // Botón Advanced/Lite
-        const advLiteBtn = document.getElementById('advanced-lite-btn');
-        const liteDpsHealerBtn = document.getElementById('lite-dps-healer-btn');
-        if (advLiteBtn) {
-            advLiteBtn.addEventListener('click', () => {
-                isLiteMode = !isLiteMode;
-                advLiteBtn.classList.toggle('lite', isLiteMode);
-                advLiteBtn.textContent = isLiteMode ? 'Lite' : 'Advanced';
-                // Mostrar/ocultar el botón DPS/Healer
-                if (liteDpsHealerBtn) {
-                    liteDpsHealerBtn.style.display = isLiteMode ? 'inline-flex' : 'none';
-                }
-                fetchDataAndRender();
-            });
-        }
-        if (liteDpsHealerBtn) {
-            liteDpsHealerBtn.addEventListener('click', () => {
-                liteModeType = (liteModeType === 'dps') ? 'healer' : 'dps';
-                liteDpsHealerBtn.textContent = (liteModeType === 'dps') ? 'DPS' : 'Healer';
-                liteDpsHealerBtn.classList.toggle('lite', isLiteMode); /* Asegura que el botón Lite/Healer también tenga el estilo 'lite' */
-                fetchDataAndRender();
-            });
-        }
-        // Inicializar visibilidad y estilo del botón al cargar
-        if (liteDpsHealerBtn) {
-            liteDpsHealerBtn.style.display = isLiteMode ? 'inline-flex' : 'none';
-            liteDpsHealerBtn.classList.toggle('lite', isLiteMode);
-        }
+
+        // Removed Advanced/Lite toggle functionality - Lite mode only
 
         const zoomInButton = document.getElementById('zoom-in-button');
         const zoomOutButton = document.getElementById('zoom-out-button');
@@ -144,6 +143,25 @@ const professionMap = {
                     lockButton.title = isLocked ? 'Desbloquear posición' : 'Bloquear posición';
                     document.body.classList.toggle('locked', isLocked); // Añadir/quitar clase al body
                 });
+                
+                // Listen for header toggle
+                window.electronAPI.onToggleHeader(() => {
+                    const header = document.querySelector('.controls');
+                    if (header) {
+                        header.style.display = header.style.display === 'none' ? 'flex' : 'none';
+                    }
+                });
+                
+                // Add keyboard listener for debug panel toggle
+                document.addEventListener('keydown', (event) => {
+                    if (event.ctrlKey && event.altKey && event.key === 'd') {
+                        const debugDiv = document.getElementById('debug-info');
+                        if (debugDiv) {
+                            debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
+                            console.log('Debug panel toggled');
+                        }
+                    }
+                });
             }
         }
 
@@ -170,12 +188,12 @@ const professionMap = {
         const container = document.getElementById('player-bars-container');
         if (!dpsMeter || !container || !window.electronAPI) return;
 
-        const baseWidth = 650; // Ancho fijo como se solicitó
+        const baseWidth = 350; // Ancho fijo como se solicitó
         const headerHeight = document.querySelector('.controls')?.offsetHeight || 50; // Altura de la cabecera
-        const marginTop = 40; // Margen superior del contenedor de barras
+        const marginTop = 0; // Margen superior del contenedor de barras
         const borderWidth = 2; // Borde superior e inferior del contenedor
         const barHeight = 55; // Altura de cada barra de jugador
-        const barGap = 8;    // Espacio entre barras
+        const barGap = 0;    // Espacio entre barras
 
         const numPlayers = container.querySelectorAll('.player-bar').length;
         const numPlayersCapped = Math.min(numPlayers, 10); // Limitar a 10 barras
@@ -206,6 +224,45 @@ const professionMap = {
         lastTotalDamage = 0;
         lastDamageChangeTime = Date.now();
         stopSyncTimer(); // Detener el temporizador de sincronización al reiniciar
+        resetPhaseTimer(); // Reset phase timer
+    }
+    
+    // Phase timer functions
+    function startPhaseTimer() {
+        if (phaseStartTime) return; // Already running
+        
+        phaseStartTime = Date.now();
+        phaseTimer.style.display = 'block';
+        
+        phaseTimerInterval = setInterval(updatePhaseTimer, 1000);
+        updatePhaseTimer();
+    }
+    
+    function updatePhaseTimer() {
+        if (!phaseStartTime) return;
+        
+        const elapsed = Date.now() - phaseStartTime;
+        const minutes = Math.floor(elapsed / 60000);
+        const seconds = Math.floor((elapsed % 60000) / 1000);
+        
+        phaseTimerText.textContent = `Phase ${phaseNumber}: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    function resetPhaseTimer() {
+        if (phaseTimerInterval) {
+            clearInterval(phaseTimerInterval);
+            phaseTimerInterval = null;
+        }
+        phaseStartTime = null;
+        phaseNumber = 1;
+        phaseTimer.style.display = 'none';
+    }
+    
+    function nextPhase() {
+        if (phaseStartTime) {
+            phaseNumber++;
+            phaseStartTime = Date.now(); // Reset timer for new phase
+        }
     }
 
     // La función syncData ya no se llama por un clic, pero se mantiene por si se usa internamente
@@ -221,6 +278,9 @@ const professionMap = {
 
     // Función para actualizar el estado visual del indicador de sincronización
     function updateSyncButtonState() {
+        // Skip if sync button elements don't exist
+        if (!syncIcon || !syncTimerSpan) return;
+        
         clearTimeout(syncTimerDisplayTimeout); // Limpiar cualquier timeout pendiente
 
         if (syncTimerInterval) { // Si el temporizador está activo (hay cuenta regresiva)
@@ -248,11 +308,11 @@ const professionMap = {
     function startSyncTimer() {
         if (syncTimerInterval) return; // Evitar múltiples temporizadores
         syncCountdown = SYNC_RESET_TIME;
-        updateSyncButtonState(); // Establecer el estado inicial
+        // Sync button removed - no state to update
 
         syncTimerInterval = setInterval(() => {
             syncCountdown--;
-            updateSyncButtonState(); // Actualizar el estado en cada tick
+            // Sync button removed - no state to update
 
             if (syncCountdown <= 0) {
                 stopSyncTimer();
@@ -265,7 +325,7 @@ const professionMap = {
         clearInterval(syncTimerInterval);
         syncTimerInterval = null;
         clearTimeout(syncTimerDisplayTimeout); // Limpiar el timeout si existe
-        updateSyncButtonState(); // Restablecer el estado del indicador
+        // Sync button removed - no state to update
     }
 
     function formatTimer(ms) {
@@ -387,7 +447,6 @@ const professionMap = {
             if (!userArray || userArray.length === 0) {
                 loadingIndicator.style.display = 'flex'; // Mostrar el indicador de carga
                 playerBarsContainer.style.display = 'none'; // Ocultar el contenedor de barras
-                updateSyncButtonState();
                 return;
             }
 
@@ -396,16 +455,21 @@ const professionMap = {
 
             const sumaTotalDamage = userArray.reduce((acc, u) => acc + (u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0), 0);
 
+            // No client-side combat tracking - server handles everything
+
+            // No client-side flushing - let server handle 5s timeout like StarResonanceDps
+            
+            // Update phase timer when combat starts
+            if (sumaTotalDamage > 0 && !phaseStartTime) {
+                startPhaseTimer();
+            }
+
             if (sumaTotalDamage > 0) {
                 if (sumaTotalDamage !== lastTotalDamage) {
                     lastTotalDamage = sumaTotalDamage;
                     lastDamageChangeTime = Date.now();
                     stopSyncTimer();
                 } else {
-                    if (Date.now() - lastDamageChangeTime > SYNC_RESET_TIME * 1000) {
-                        resetDpsMeter();
-                        return;
-                    }
                     if (!syncTimerInterval) {
                         startSyncTimer();
                     }
@@ -435,144 +499,96 @@ const professionMap = {
             
             userArray = userArray.slice(0, 20);
 
-            if (isLiteMode) {
-                container.innerHTML = userArray.map((u, index) => {
+            // Always use Lite mode
+            container.innerHTML = userArray.map((u, index) => {
                     const professionParts = u.profession.split('-');
                     const mainProfessionKey = professionParts[0];
                     const subProfessionKey = professionParts[1];
                     const mainProf = professionMap[mainProfessionKey] || defaultProfession;
                     const subProf = professionMap[subProfessionKey];
-                    let prof = subProf || mainProf;
+                    // Prioritize main profession role, but use sub-profession if main is not found
+                    let prof = mainProf.name !== 'Unknown' ? mainProf : (subProf || mainProf);
                     const nombre = u.name || '';
-                    const color = playerColors[index % playerColors.length];
+                    
+                    // Debug: Log the profession info
+                    console.log('Player:', nombre, 'Profession:', u.profession, 'Main:', mainProfessionKey, 'Sub:', subProfessionKey, 'Role:', prof.role);
+                    
+                    // Role-based color coding
+                    let roleColor;
+                    if (prof.role === 'healer') {
+                        roleColor = '#28a745'; // Green for healers
+                    } else if (prof.role === 'tank') {
+                        roleColor = '#007bff'; // Blue for tanks
+                    } else {
+                        roleColor = '#fd7e14'; // Orange for DPS
+                    }
+                    
                     let barFillWidth, barFillBackground, value1, value2, iconHtml;
 
                     if (liteModeType === 'dps') {
-                        barFillWidth = u.damagePercent;
-                        barFillBackground = u.total_dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
-                        iconHtml = "<span style='font-size:1.1em;margin-right:2px;'>🔥</span>";
-                        value1 = `${formatStat(u.total_damage.total || 0)}`;
-                        value2 = `${Math.round(u.damagePercent)}%`;
+                        // Calculate bar width based on damage relative to highest damage player
+                        const maxDamage = Math.max(...userArray.map(player => player.total_damage.total || 0));
+                        barFillWidth = calculateBarWidth(u.total_damage.total || 0, maxDamage);
+                        
+                        // Calculate DPS exactly like StarResonanceDps: DPS = Total Damage ÷ Duration
+                        // Prefer server timing when available to avoid drift
+                        let displayDPS = 0;
+                        const serverStart = u.start_ts;
+                        const serverLast = u.last_ts;
+                        if (serverStart && serverLast && serverLast > serverStart) {
+                            const durationSec = (serverLast - serverStart) / 1000;
+                            displayDPS = durationSec > 0 ? (u.total_damage.total || 0) / durationSec : 0;
+                        } else {
+                            // Fallback to client-estimated timestamps
+                            const playerData = dpsHistory.get(u.uid);
+                            if (playerData && playerData.firstDamageTime && playerData.lastDamageTime) {
+                                const combatDuration = (playerData.lastDamageTime - playerData.firstDamageTime) / 1000;
+                                displayDPS = combatDuration > 0 ? (u.total_damage.total || 0) / combatDuration : 0;
+                            } else {
+                                // Conservative fallback to avoid inflated numbers
+                                const combatDuration = 20;
+                            displayDPS = (u.total_damage.total || 0) / combatDuration;
+                            }
+                        }
+                        barFillBackground = displayDPS > 0 ? `linear-gradient(90deg, transparent, ${roleColor})` : 'none';
+                        value1 = `${formatStat(u.total_damage.total || 0)} (${formatStat(displayDPS)}/s)`; // Total (DPS/s)
                     } else { // liteModeType === 'healer'
-                        barFillWidth = u.healingPercent;
-                        barFillBackground = u.total_healing && u.total_healing.total > 0 ? `linear-gradient(90deg, transparent, #28a745)` : 'none'; // Verde para healer
-                        iconHtml = "<span style='font-size:1.1em;margin-right:2px; color: #28a745; text-shadow: 0 0 2px white, 0 0 2px white, 0 0 2px white, 0 0 2px white;'>⛨</span>"; // Icono verde con contorno blanco
-                        value1 = `${formatStat((u.total_healing && u.total_healing.total) || 0)}`;
-                        value2 = `${Math.round(u.healingPercent)}%`; // Porcentaje de contribución de heal
+                        // Simple HPS calculation - no smoothing, raw server timing
+                        const totalHealing = userArray.reduce((sum, player) => sum + (player.total_healing.total || 0), 0);
+                        barFillWidth = calculateBarWidth(u.total_healing.total || 0, totalHealing);
+                        
+                        // Raw HPS = total healing ÷ time (same as DPS logic)
+                        let displayHPS = 0;
+                        const serverStart = u.start_ts;
+                        const serverLast = u.last_ts;
+                        if (serverStart && serverLast && serverLast > serverStart) {
+                            const durationSec = (serverLast - serverStart) / 1000;
+                            displayHPS = durationSec > 0 ? (u.total_healing.total || 0) / durationSec : 0;
+                        }
+                        
+                        barFillBackground = displayHPS > 0 ? `linear-gradient(90deg, transparent, ${roleColor})` : 'none';
+                        value1 = `${formatStat((u.total_healing && u.total_healing.total) || 0)} (${formatStat(displayHPS)}/s)`;
                     }
 
                     return `<div class="lite-bar" data-lite="true" data-rank="${u.rank}">
                         <div class="lite-bar-fill" style="width: ${barFillWidth}%; background: ${barFillBackground};"></div>
-                        <div class="lite-bar-content" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; justify-content: space-between;">
-                            <div class="skill-analysis-button" title="Análisis de Habilidades">
-                                <i class="fa-solid fa-chart-bar"></i>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <img class="lite-bar-icon" src="icons/${prof.icon}" alt="icon" style="margin-left:2px; margin-right:5px;" />
-                                <span class="lite-bar-name">${nombre}</span>
+                        <div class="lite-bar-content" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; padding: 0 8px;">
+                            
+                            <div style="display: flex; align-items: center; gap: 6px; flex: 1;">
+                                <img class="lite-bar-icon" src="icons/${prof.icon}" alt="icon" style="width: 16px; height: 16px;" />
+                                <span class="lite-bar-name" style="color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">${nombre}</span>
                             </div>
                             <div class="lite-bar-values">
-                                <span class="lite-bar-damage">${value1} ${iconHtml}</span>
-                                <span class="lite-bar-percent">${value2}</span>
+                                <span class="lite-bar-damage" style="color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">${value1}</span>
                             </div>
                         </div>
                     </div>`;
                 }).join('');
-            } else {
-                // ...renderizado original...
-                container.innerHTML = userArray.map((u, index) => {
-                    const professionParts = u.profession.split('-');
-                    const mainProfessionKey = professionParts[0];
-                    const subProfessionKey = professionParts[1];
-                    const mainProf = professionMap[mainProfessionKey] || defaultProfession;
-                    const subProf = professionMap[subProfessionKey];
-                    let prof = subProf || mainProf;
-                    let professionName = mainProf.name;
-                    if (subProf) {
-                        professionName += ` - ${subProf.name}`;
-                    }
-                    const dps = Number(u.total_dps) || 0;
-                    const totalHealing = u.total_healing ? (Number(u.total_healing.total) || 0) : 0;
-                    const color = playerColors[index % playerColors.length];
-                    const dpsColor = dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
-                    const nombre = u.name || '';
-                    const totalHits = u.total_count.total || 0;
-                    const crit = (u.total_count.critical !== undefined && totalHits > 0) ? Math.round((u.total_count.critical / totalHits) * 100) : '0';
-                    const lucky = (u.total_count.lucky !== undefined && totalHits > 0) ? Math.round((u.total_count.lucky / totalHits) * 100) : '0';
-                    const peak = (u.realtime_dps_max !== undefined) ? u.realtime_dps_max : 0;
-                    return `<div class="player-bar" data-rank="${u.rank}">
-                        <div class="progress-fill" style="width: ${u.damagePercent}%; background: ${dpsColor}"></div>
-                        <div class="bar-content">
-                            <div class="skill-analysis-button" title="Análisis de Habilidades">
-                                <i class="fa-solid fa-chart-bar"></i>
-                            </div>
-                            <div class="column name-col">
-                                <span class="player-name">${nombre}</span>
-                                <div class="additional-stat-row" style="height: 18px; margin-top: 1px; margin-bottom: 1px;">
-                                    <span class="additional-stat-icon" style="color: #dc3545; position: absolute; left: 4px; z-index: 2;">❤</span>
-                                    <div class="hp-bar-background">
-                                        <div class="hp-bar-fill" style="width: ${((u.hp || 0) / (u.max_hp || 1)) * 100}%; background-color: ${getHealthColor(((u.hp || 0) / (u.max_hp || 1)) * 100)};"></div>
-                                    </div>
-                                    <span class="additional-stat-value" style="width: 100%; text-align: center; font-size: 0.8rem; color: white; text-shadow: 1px 1px 1px black;">${formatStat(u.hp || 0)}/${formatStat(u.max_hp || 0)}</span>
-                                </div>
-                                <span class="player-id">${professionName}</span>
-                            </div>
-                            <div class="column stats-col" style="margin-left: 40px;">
-                                <div class="stats-group">
-                                    <div class="stat-row"><span class="stat-value">${formatStat(dps)}</span><span class="stat-label">DPS</span></div>
-                                    <div class="stat-row"><span class="stat-value">${formatStat(u.total_hps || 0)}</span><span class="stat-label" style="color: #28a745;">HPS</span></div>
-                                    <div class="stat-row"><span class="stat-value">${formatStat(u.taken_damage)}</span><span class="stat-label" style="color: #ffc107;">DT</span></div>
-                                </div>
-                            </div>
-                            <div class="column icon-col" style="flex-direction: column; justify-content: center; align-items: center; text-align: center; min-width: 65px; position: relative; margin-left: -10px;">
-                                <img class="class-icon" src="icons/${prof.icon}" alt="icon" style="height: 42px; width: 42px;">
-                                <span style="font-size: 0.8rem; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 0 4px; border-radius: 5px; position: absolute; top: 12.5px; left: 50%; transform: translateX(-50%); text-shadow: 0 0 2px rgba(0,0,0,0.7);">${Math.round(u.damagePercent)}%</span>
-                            </div>
-                            <div class="column extra-col" style="margin-left: -10px;">
-                                <div class="stats-extra">
-                                    <div class="stat-row">
-                                        <span class="stat-label">CRIT</span>
-                                        <span class="stat-icon"> ✸</span>
-                                        <span class="stat-value">${crit}%</span>
-                                    </div>
-                                    <div class="stat-row">
-                                        <span class="stat-label">LUCK</span>
-                                        <span class="stat-icon"> ☘</span>
-                                        <span class="stat-value">${lucky}%</span>
-                                    </div>
-                                    <div class="stat-row">
-                                        <span class="stat-label">MAX</span>
-                                        <span class="stat-icon"> ⚔</span>
-                                        <span class="stat-value">${formatStat(peak)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="column additional-stats-col">
-                                <div class="additional-stats-group">
-                                    <div class="additional-stat-row">
-                                        <span class="additional-stat-icon" style="font-weight: bold;">GS</span>
-                                        <span class="additional-stat-value">${formatStat(u.fightPoint)}</span>
-                                    </div>
-                                    <div class="additional-stat-row">
-                                        <span class="additional-stat-icon">🔥</span>
-                                        <span class="additional-stat-value">${formatStat(u.total_damage.total || 0)}</span>
-                                    </div>
-                                    <div class="additional-stat-row">
-                                        <span class="additional-stat-icon" style="color: #28a745;">⛨</span>
-                                        <span class="additional-stat-value">${formatStat(u.total_healing.total || 0)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('');
-            }
         } catch (err) {
             if (container) {
-                container.innerHTML = '<div id="message-display">Error de conexión...</div>';
+                container.innerHTML = '<div id="message-display">Connection Lost... do you have npcap installed?</div>';
             }
         } finally {
-            updateSyncButtonState();
             updateWindowSize();
         }
     }

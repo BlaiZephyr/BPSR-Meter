@@ -88,12 +88,16 @@ logToFile('==== INICIO DE ELECTRON ====');
         logToFile('Puerto disponible encontrado: ' + server_port);
 
         mainWindow = new BrowserWindow({
-            width: 650,
-            height: 600,
+            width: 350,
+            height: 200,
+            x: 0, // Left edge of screen
+            y: 0, // Will be set to middle after creation
             transparent: true,
             frame: false,
             alwaysOnTop: true,
             resizable: false,
+            skipTaskbar: false,
+            focusable: true,
             webPreferences: {
                 preload: path.join(__dirname, 'preload.js'),
                 nodeIntegration: false,
@@ -101,6 +105,35 @@ logToFile('==== INICIO DE ELECTRON ====');
             },
             icon: path.join(__dirname, 'icon.ico'),
         });
+
+        // Ensure window stays on top
+        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        mainWindow.setAlwaysOnTop(true, 'floating');
+        mainWindow.setAlwaysOnTop(true, 'torn-off-menu');
+        mainWindow.setAlwaysOnTop(true, 'modal-panel');
+
+        // Position window at middle left of screen
+        const { screen } = require('electron');
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { height: screenHeight } = primaryDisplay.workAreaSize;
+        const windowHeight = 200;
+        const centerY = Math.floor((screenHeight - windowHeight) / 2);
+        
+        mainWindow.setPosition(0, centerY); // Left edge, vertically centered
+
+        // Make window interactive by default
+        mainWindow.setIgnoreMouseEvents(false);
+        mainWindow._isClickThrough = false; // Track the state
+
+        // Periodic check to ensure window stays on top
+        setInterval(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                if (!mainWindow.isAlwaysOnTop()) {
+                    console.log('Window lost alwaysOnTop, restoring...');
+                    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+                }
+            }
+        }, 1000); // Check every second
 
         // Iniciar el servidor Node.js, pasando el puerto como argumento
 
@@ -232,14 +265,155 @@ logToFile('==== INICIO DE ELECTRON ====');
         }
     });
 
+    // Manejar el evento para alternar la interacción con la ventana
+    ipcMain.on('toggle-interaction', () => {
+        if (mainWindow) {
+            // Toggle between click-through and interactive modes
+            // We'll track the state ourselves since getIgnoreMouseEvents doesn't exist
+            if (mainWindow._isClickThrough) {
+                mainWindow.setIgnoreMouseEvents(false);
+                mainWindow._isClickThrough = false;
+                mainWindow.webContents.send('interaction-state-changed', false);
+                console.log('Interacción: Habilitada');
+            } else {
+                mainWindow.setIgnoreMouseEvents(true, { forward: true });
+                mainWindow._isClickThrough = true;
+                mainWindow.webContents.send('interaction-state-changed', true);
+                console.log('Interacción: Deshabilitada');
+            }
+        }
+    });
+
+    // Manejar el evento para habilitar temporalmente la interacción (para drag)
+    ipcMain.on('enable-temp-interaction', () => {
+        if (mainWindow) {
+            mainWindow.setIgnoreMouseEvents(false);
+            mainWindow._isClickThrough = false;
+            mainWindow.webContents.send('temp-interaction-enabled');
+        }
+    });
+
+    // Manejar el evento para deshabilitar la interacción temporal
+    ipcMain.on('disable-temp-interaction', () => {
+        if (mainWindow) {
+            mainWindow.setIgnoreMouseEvents(true, { forward: true });
+            mainWindow._isClickThrough = true;
+            mainWindow.webContents.send('temp-interaction-disabled');
+        }
+    });
+
+        // Manejar el evento para mostrar/ocultar la ventana
+        ipcMain.on('toggle-visibility', () => {
+            if (mainWindow) {
+                if (mainWindow.isVisible()) {
+                    mainWindow.hide();
+                } else {
+                    mainWindow.show();
+                }
+            }
+        });
+
+        // Manejar el evento para alternar la cabecera
+        ipcMain.on('toggle-header', () => {
+            if (mainWindow) {
+                mainWindow.webContents.send('toggle-header');
+            }
+        });
+
     // Enviar el estado inicial del candado al renderizador una vez que la ventana esté lista
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.webContents.send('lock-state-changed', isLocked);
     });
 }
 
+// Global keybind support
+const { globalShortcut } = require('electron');
+
+// Function to register global shortcuts
+function registerGlobalShortcuts() {
+    // Clear existing shortcuts
+    globalShortcut.unregisterAll();
+    
+    // Default keybinds
+            let keybinds = {
+                toggleInteraction: 'F6',
+                toggleVisibility: 'Ctrl+Shift+H',
+                toggleLock: 'Ctrl+Shift+L',
+                toggleHeader: 'Ctrl+Alt+H'
+            };
+    
+    // Try to load from localStorage (this will be handled by the renderer)
+    // For now, use defaults and let the renderer update them
+    
+    // Register shortcuts
+    try {
+        globalShortcut.register('F6', () => {
+            if (mainWindow) {
+                mainWindow.webContents.send('toggle-interaction');
+            }
+        });
+        
+        globalShortcut.register('CommandOrControl+Shift+H', () => {
+            if (mainWindow) {
+                mainWindow.webContents.send('toggle-visibility');
+            }
+        });
+        
+                globalShortcut.register('CommandOrControl+Shift+L', () => {
+                    if (mainWindow) {
+                        mainWindow.webContents.send('toggle-lock');
+                    }
+                });
+                globalShortcut.register('CommandOrControl+Alt+H', () => {
+                    if (mainWindow) {
+                        mainWindow.webContents.send('toggle-header');
+                    }
+                });
+    } catch (error) {
+        console.error('Failed to register global shortcuts:', error);
+    }
+}
+
+// Handle keybind updates from renderer
+ipcMain.on('update-keybinds', (event, newKeybinds) => {
+    // Unregister all existing shortcuts
+    globalShortcut.unregisterAll();
+    
+    // Register new shortcuts
+    try {
+        if (newKeybinds.toggleInteraction) {
+            globalShortcut.register(newKeybinds.toggleInteraction, () => {
+                if (mainWindow) {
+                    mainWindow.webContents.send('toggle-interaction');
+                }
+            });
+        }
+        
+        if (newKeybinds.toggleVisibility) {
+            globalShortcut.register(newKeybinds.toggleVisibility, () => {
+                if (mainWindow) {
+                    mainWindow.webContents.send('toggle-visibility');
+                }
+            });
+        }
+        
+        if (newKeybinds.toggleLock) {
+            globalShortcut.register(newKeybinds.toggleLock, () => {
+                if (mainWindow) {
+                    mainWindow.webContents.send('toggle-lock');
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Failed to register new shortcuts:', error);
+    }
+});
+
 app.whenReady().then(() => {
     createWindow();
+    
+    // Register global shortcuts
+    registerGlobalShortcuts();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

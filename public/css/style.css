@@ -1,31 +1,3 @@
-/* Botón Advanced/Lite: rectangular y alargado */
-.advanced-lite-btn {
-    border-radius: 18px !important;
-    width: 110px !important;
-    min-width: 90px;
-    height: 32px !important;
-    background: rgba(255,255,255,0.10);
-    color: #fff;
-    font-weight: 600;
-    font-size: 0.95rem;
-    border: 1px solid rgba(255,255,255,0.13);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    margin: 0 2px;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 18px;
-}
-.advanced-lite-btn.lite {
-    background: rgba(40,40,40,0.45) !important;
-    color: #fff !important;
-    font-weight: bold !important;
-    border: 1.5px solid rgba(255,255,255,0.18);
-    letter-spacing: 0.5px;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.18);
-}
 /* Barras Lite: 50% más altas, la mitad de largas, barra igual que Advanced */
 .lite-bar {
     background: var(--bar-bg-color);
@@ -33,16 +5,16 @@
     height: 31px; /* 30% más baja (44px * 0.70 = 30.8px) */
     min-height: 31px;
     max-height: 31px;
-    margin-bottom: 4px;
-    width: 60%; /* 10% más larga que antes */
+    margin-bottom: 0;
+    width: 100%;
     min-width: 0;
-    max-width: 60%;
+    max-width: 100%;
     position: relative;
     overflow: hidden;
     display: flex;
     align-items: center;
     box-shadow: 0 1px 4px rgba(0,0,0,0.10);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: none;
 }
 .lite-bar-fill {
     position: absolute;
@@ -63,44 +35,30 @@
 .lite-bar-values {
     display: flex;
     align-items: center;
-    gap: 20px; /* Ajustado a 20px para la separación mínima solicitada */
     height: 100%;
+    flex-shrink: 0;
 }
-.lite-bar-damage, .lite-bar-percent {
-    font-size: 1.08em;
+.lite-bar-damage {
+    font-size: 0.85em;
     font-weight: 700;
-    color: #fff;
     display: flex;
     align-items: center;
     white-space: nowrap;
 }
 .lite-bar-name {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 600;
-    color: #fff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 110px;
-    margin-left: 4px;
-}
-.lite-bar-damage {
-    font-size: 0.90rem;
-    color: #fff;
-    font-weight: 600;
-    margin-left: 0;
-    min-width: 60px;
-    text-align: right;
-    display: flex;
-    align-items: center;
-    gap: 2px;
+    max-width: 120px;
 }
 .lite-bar-icon {
-    width: 28px;
-    height: 28px;
+    width: 16px;
+    height: 16px;
     object-fit: contain;
-    border-radius: 8px;
-    margin: 0 8px 0 0;
+    border-radius: 3px;
+    flex-shrink: 0;
     background: none;
     display: block;
 }
@@ -154,7 +112,7 @@ body.locked #lock-button {
 
 .container {
     width: 100%;
-    max-width: 800px;
+    max-width: 100%;
     margin: 0 auto;
 }
 
@@ -212,7 +170,7 @@ input[type="text"] {
     background: var(--bar-bg);
     border: var(--border-soft);
     border-radius: 6px;
-    margin-bottom: 4px;
+    margin-bottom: 0;
     height: 60px;
     width: 100%;
     position: relative;
@@ -459,7 +417,7 @@ input[type="text"] {
     transform: scale(1.2);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-.dps-meter { width: 650px; background-color: transparent; padding: 4px 8px; } /* Ancho fijo */
+.dps-meter { width: 350px; background-color: transparent; padding: 2px 4px; } /* Ancho fijo */
 .controls {
     display: flex;
     justify-content: flex-start;
@@ -502,7 +460,26 @@ input[type="text"] {
 #guardar-btn:hover {
     background: #6a6e9a;
 }
-.control-button { width: 32px; height: 32px; background-color: rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%; color: var(--text-primary); font-size: 0.9rem; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 4px; -webkit-app-region: no-drag; }
+.control-button { 
+    width: 18px; 
+    height: 18px; 
+    background-color: rgba(0,0,0,0.4); 
+    border: 1px solid rgba(255, 255, 255, 0.2); 
+    border-radius: 3px; 
+    color: var(--text-primary); 
+    font-size: 0.7rem; 
+    cursor: pointer; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    gap: 1px; 
+    -webkit-app-region: no-drag; 
+    transition: all 0.15s ease;
+}
+.control-button:hover {
+    background-color: rgba(255,255,255,0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+}
 #reset-button { background-color: rgba(219, 104, 121, 0.5); }
 #reset-button:hover { background-color: rgba(219, 104, 121, 0.7); }
 
@@ -542,17 +519,16 @@ input[type="text"] {
 }
 
 .sync-button {
-    width: 29px;
-    height: 29px;
-    background-color: rgba(0,0,0,0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 16px;
+    height: 16px;
+    background-color: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     color: var(--text-primary);
     display: flex;
     justify-content: center;
     align-items: center;
     overflow: hidden;
-    /* Los estilos de posición se moverán al inline style en el HTML */
 }
 
 .sync-button:hover {
@@ -606,7 +582,7 @@ input[type="text"] {
 .timer-btn i {
     margin-right: 5px;
 }
-#player-bars-container { display: flex; flex-direction: column; gap: 8px; }
+#player-bars-container { display: flex; flex-direction: column; gap: 0; }
 .player-bar { background-color: var(--bar-bg-color); border-radius: 8px; height: 55px; position: relative; overflow: hidden; }
 .progress-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 8px; transition: width 0.4s ease-out; z-index: 1; }
 .player-bar[data-rank="1"] .progress-fill { background-color: var(--rank-1-color); }
@@ -671,37 +647,6 @@ input[type="text"] {
     color: #db6879;
 }
 
-/* Estilos para el botón de Análisis de Habilidades */
-.skill-analysis-button {
-    position: absolute;
-    left: 0px; /* Ajustar según sea necesario para la separación */
-    top: 50%;
-    transform: translateY(-50%);
-    width: 30px; /* Tamaño del botón */
-    height: 30px;
-    background-color: rgba(0, 123, 255, 0.6); /* Un color azul sutil */
-    border: 1px solid rgba(0, 123, 255, 0.8);
-    border-radius: 50%; /* Circular */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    z-index: 3; /* Asegurarse de que esté por encima de la barra */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
-}
-
-.skill-analysis-button:hover {
-    background-color: rgba(0, 123, 255, 0.8);
-    border-color: rgba(0, 123, 255, 1);
-    transform: translateY(-50%) scale(1.05);
-}
-
-.skill-analysis-button i {
-    color: #fff;
-    font-size: 0.9rem;
-    text-shadow: 0 0 2px rgba(0,0,0,0.7);
-}
 
 /* Ajustes para el contenido de la barra para dejar espacio al botón */
 .player-bar .bar-content {

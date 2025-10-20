@@ -12,39 +12,40 @@
 </head>
 <body>
 <div class="dps-meter">
-        <header class="controls" style="width: 100%;">
-            <div style="position: relative; width: 32px; height: 32px; margin-right: 10px;"> <!-- Contenedor para el icono y el botón de sincronización -->
-                <img src="icon.png" alt="Logo" style="height: 32px; position: absolute; top: 0; left: 0;">
-                <div class="sync-button" id="sync-button" style="position: absolute; top: 1.5px; left: 1.5px; z-index: 11;"> <!-- Centrado sobre el icono -->
-                    <i class="fa-solid fa-arrows-rotate sync-icon"></i>
-                    <span class="sync-timer"></span>
+        <header class="controls" style="width: 100%; display: flex; align-items: center; padding: 3px 4px; background: rgba(0,0,0,0.3); border-radius: 3px; margin-bottom: 0px; height: 24px;">
+            
+            <!-- Guild name - compact -->
+            <div style="flex: 1; text-align: center; min-width: 0;">
+                <span style="color: #e0e0e0; font-size: 0.7rem; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Gremlin Gaming Guild</span>
+            </div>
+            
+            <!-- Essential controls only -->
+            <div style="display: flex; align-items: center; gap: 1px; flex-shrink: 0;">
+                <button class="control-button" id="reset-button" title="Reset" style="display: none; width: 18px; height: 18px; font-size: 0.7rem;"><i class="fa-solid fa-arrows-rotate"></i></button>
+                <button class="control-button" id="clear-data-button" title="Clear DPS Data" style="width: 18px; height: 18px; font-size: 0.7rem;"><i class="fa-solid fa-trash"></i></button>
+                <div id="dps-timer-btns" class="dps-timer-buttons" style="display: none;"></div>
+                <button class="control-button" id="zoom-in-button" title="Zoom In" style="width: 18px; height: 18px; font-size: 0.7rem;"><i class="fa-solid fa-plus"></i></button>
+                <button class="control-button" id="zoom-out-button" title="Zoom Out" style="width: 18px; height: 18px; font-size: 0.7rem;"><i class="fa-solid fa-minus"></i></button>
+                <div class="drag-indicator" id="drag-indicator" title="Move" style="width: 18px; height: 18px; font-size: 0.7rem;">
+                    <i class="fa-solid fa-up-down-left-right"></i>
                 </div>
+                <button class="control-button" id="lock-button" title="Lock" style="width: 18px; height: 18px; font-size: 0.7rem;"><i class="fa-solid fa-lock-open"></i></button>
+                <button class="control-button" id="close-button" title="Close" style="width: 18px; height: 18px; font-size: 0.7rem; background-color: rgba(220, 53, 69, 0.6);"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <button class="control-button" id="reset-button" title="Reset" style="display: none;"><i class="fa-solid fa-arrows-rotate"></i></button>
-            <div id="dps-timer-btns" class="dps-timer-buttons" style="flex-grow: 1; justify-content: flex-end; display: none;">
-            </div>
-            <button class="control-button" id="zoom-in-button" title="Aumentar tamaño"><i class="fa-solid fa-plus"></i></button>
-            <!-- Botón de mover ventana (drag) -->
-            <div class="drag-indicator" id="drag-indicator" title="Mover ventana">
-                <i class="fa-solid fa-up-down-left-right"></i>
-            </div>
-            <button class="control-button" id="zoom-out-button" title="Reducir tamaño"><i class="fa-solid fa-minus"></i></button>
-            <!-- Botón Advanced/Lite -->
-        <button class="control-button advanced-lite-btn" id="advanced-lite-btn" title="Toggle Advanced/Lite">Advanced</button>
-        <!-- Botón DPS/Healer solo visible en modo Lite -->
-        <button class="control-button advanced-lite-btn" id="lite-dps-healer-btn" style="display:none;">DPS</button>
-            <!-- Botón de bloqueo/desbloqueo -->
-            <button class="control-button" id="lock-button" title="Bloquear posición" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-lock-open"></i></button>
-            <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
         </header>
-        <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+        <div style="display:flex; flex-direction:column; gap:0; margin-bottom:0;">
             <div id="dps-timer" style="text-align:center;font-size:1.2rem;font-weight:700;margin-top:4px;min-height:28px;color:#e0e0e0;display:none; text-shadow: var(--text-shadow);"></div>
             <div id="logs-section" style="margin-top:8px;"></div>
         </div>
         <div id="loading-indicator">
             <i class="fa-solid fa-spinner fa-spin"></i>
         </div>
-        <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1); display: none;"></main>
+        <main id="player-bars-container" style="margin-top: 24px; margin-left: -1.5px; margin-right: -1.6px; border: 0.1px solid rgba(255, 255, 255, 0.1); display: none;"></main>
+        
+        <!-- Phase Timer - Bottom Left -->
+        <div id="phase-timer" style="position: absolute; bottom: 4px; left: 4px; color: #e0e0e0; font-size: 0.7rem; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.7); display: none;">
+            <span id="phase-timer-text">Phase: 0:00</span>
+        </div>
     </div>
 
     <script src="js/main.js"></script>
